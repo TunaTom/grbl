@@ -32,6 +32,7 @@
 #include <avr/interrupt.h>
 #include "planner.h"
 #include "limits.h"
+#include "hbridge.h"
 
 // Some useful constants
 #define STEP_MASK ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)) // All step bits
@@ -136,17 +137,23 @@ static uint8_t iterate_trapezoid_cycle_counter()
 ISR(TIMER1_COMPA_vect)
 {        
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
+
+  if (USE_HBRIDGE) {
+    STEPPING_PORT = toHbridge(out_bits);
+  } else {
+    // Set the direction pins a couple of nanoseconds before we step the steppers
+    STEPPING_PORT = (STEPPING_PORT & ~DIRECTION_MASK) | (out_bits & DIRECTION_MASK);
+    // Then pulse the stepping pins
+    STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | out_bits;
+  }
   
-  // Set the direction pins a couple of nanoseconds before we step the steppers
-  STEPPING_PORT = (STEPPING_PORT & ~DIRECTION_MASK) | (out_bits & DIRECTION_MASK);
-  // Then pulse the stepping pins
-  STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | out_bits;
   // Enable step pulse reset timer so that The Stepper Port Reset Interrupt can reset the signal after
   // exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
   TCNT2 = -(((settings.pulse_microseconds-2)*TICKS_PER_MICROSECOND) >> 3); // Reload timer counter
   TCCR2B = (1<<CS21); // Begin timer2. Full speed, 1/8 prescaler
 
   busy = true;
+
   // Re-enable interrupts to allow ISR_TIMER2_OVERFLOW to trigger on-time and allow serial communications
   // regardless of time in this handler. The following code prepares the stepper driver for the next
   // step interrupt compare and will always finish before returning to the main program.
@@ -250,7 +257,11 @@ ISR(TIMER1_COMPA_vect)
       plan_discard_current_block();
     }
   }
-  out_bits ^= settings.invert_mask;  // Apply stepper invert mask    
+  
+  if (!USE_HBRIDGE) {
+    out_bits ^= settings.invert_mask;  // Apply stepper invert mask
+  }
+  
   busy=false;
 }
 
@@ -261,7 +272,9 @@ ISR(TIMER1_COMPA_vect)
 ISR(TIMER2_OVF_vect)
 {
   // Reset stepping pins (leave the direction pins)
-  STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | (settings.invert_mask & STEP_MASK); 
+  if (!USE_HBRIDGE) {
+    STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | (settings.invert_mask & STEP_MASK); 
+  }
   TCCR2B = 0; // Disable Timer2 to prevent re-entering this interrupt when it's not needed. 
 }
 
@@ -345,8 +358,10 @@ static uint32_t config_step_timer(uint32_t cycles)
 
 static void set_step_events_per_minute(uint32_t steps_per_minute) 
 {
-  if (steps_per_minute < MINIMUM_STEPS_PER_MINUTE) { steps_per_minute = MINIMUM_STEPS_PER_MINUTE; }
-  cycles_per_step_event = config_step_timer((TICKS_PER_MICROSECOND*1000000*60)/steps_per_minute);
+    if (steps_per_minute < MINIMUM_STEPS_PER_MINUTE || USE_HBRIDGE) { 
+      steps_per_minute = MINIMUM_STEPS_PER_MINUTE; 
+    }
+    cycles_per_step_event = config_step_timer((TICKS_PER_MICROSECOND*1000000*60)/steps_per_minute);
 }
 
 void st_go_home()

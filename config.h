@@ -42,6 +42,8 @@
 #define Y_DIRECTION_BIT      6
 #define Z_DIRECTION_BIT      7
 
+#define USE_HBRIDGE          true
+
 #define LIMIT_DDR      DDRB
 #define LIMIT_PIN     PINB
 #define X_LIMIT_BIT          1
@@ -85,7 +87,7 @@
 // slower than this value, except when sleeping. This parameter overrides the minimum planner speed.
 // This is primarily used to guarantee that the end of a movement is always reached and not stop to
 // never reach its target. This parameter should always be greater than zero.
-#define MINIMUM_STEPS_PER_MINUTE 800 // (steps/min) - Integer value only
+#define MINIMUM_STEPS_PER_MINUTE 200 // (steps/min) - Integer value only
 
 // Number of arc generation iterations by small angle approximation before exact arc trajectory 
 // correction. This parameter maybe decreased if there are issues with the accuracy of the arc

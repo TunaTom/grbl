@@ -31,7 +31,7 @@ DEVICE     = atmega328p
 CLOCK      = 16000000
 PROGRAMMER = -c avrisp2 -P usb
 OBJECTS    = main.o motion_control.o gcode.o spindle_control.o serial.o protocol.o stepper.o \
-             eeprom.o settings.o planner.o nuts_bolts.o limits.o print.o
+             eeprom.o settings.o planner.o nuts_bolts.o limits.o print.o hbridge.o
 # FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0x24:m
 FUSES      = -U hfuse:w:0xd2:m -U lfuse:w:0xff:m
 # update that line with this when programmer is back up: 
@@ -72,11 +72,17 @@ load: all
 	bootloadHID grbl.hex
 
 clean:
-	rm -f grbl.hex main.elf $(OBJECTS)
+	rm -f grbl.hex main.elf hbridgetest $(OBJECTS)
 
 # file targets:
 main.elf: $(OBJECTS)
 	$(COMPILE) -o main.elf $(OBJECTS) -lm -Wl,--gc-sections
+	
+.PHONY: hbridgetest
+hbridgetest: hbridgetest.c hbridge.c
+	rm -f hbridgetest
+	gcc hbridgetest.c hbridge.c -o hbridgetest
+	./hbridgetest
 
 grbl.hex: main.elf
 	rm -f grbl.hex
