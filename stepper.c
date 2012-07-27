@@ -358,8 +358,11 @@ static uint32_t config_step_timer(uint32_t cycles)
 
 static void set_step_events_per_minute(uint32_t steps_per_minute) 
 {
-    if (steps_per_minute < MINIMUM_STEPS_PER_MINUTE || USE_HBRIDGE) { 
+    if (steps_per_minute < MINIMUM_STEPS_PER_MINUTE) { 
       steps_per_minute = MINIMUM_STEPS_PER_MINUTE; 
+    }
+    if (steps_per_minute > MAXIMUM_STEPS_PER_MINUTE) { 
+      steps_per_minute = MAXIMUM_STEPS_PER_MINUTE; 
     }
     cycles_per_step_event = config_step_timer((TICKS_PER_MICROSECOND*1000000*60)/steps_per_minute);
 }

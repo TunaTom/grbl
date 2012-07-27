@@ -88,6 +88,7 @@
 // This is primarily used to guarantee that the end of a movement is always reached and not stop to
 // never reach its target. This parameter should always be greater than zero.
 #define MINIMUM_STEPS_PER_MINUTE 200 // (steps/min) - Integer value only
+#define MAXIMUM_STEPS_PER_MINUTE 10000 // (steps/min) - Integer value only
 
 // Number of arc generation iterations by small angle approximation before exact arc trajectory 
 // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
